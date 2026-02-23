@@ -422,7 +422,7 @@ window.addEventListener("load", () => elInput?.focus());
 messages.push({
   id: uid(),
   role: "assistant",
-  text: "歡迎來到臺北馬拉松智慧客服！我是小幫手，隨時為您解答~ 有什麼問題可以為您解答的嗎?",
+  text: "歡迎來到 2026 101垂直馬拉松 智慧客服！我是小幫手，隨時為您解答~ 有什麼問題可以為您解答的嗎?",
   ts: Date.now(),
 });
 
