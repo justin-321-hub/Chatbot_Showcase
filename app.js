@@ -193,69 +193,35 @@ function render() {
   scrollToBottom();
 }
 /* =========================
-   全域狀態管理器 (Global State)
+   全域狀態管理器 (核彈級防護)
 ========================= */
-// ★ 將所有請求鎖、計時器、暫時訊息 ID 統一集中管理，杜絕幽靈計時器
-const ChatState = {
-  isRequestInProgress: false,
-  timer4s: null,
-  timer8s: null,
-  tempMsgId: null,
+window.isChatFetching = false;
+window.globalReqId = 0;
 
-  // 強制清除所有計時器與過渡訊息
-  clearTimers: function() {
-    if (this.timer4s) clearTimeout(this.timer4s);
-    if (this.timer8s) clearTimeout(this.timer8s);
-    this.timer4s = null;
-    this.timer8s = null;
-
-    // 將「正在查詢...」的暫時訊息從陣列中徹底移除
-    if (this.tempMsgId) {
-      const idx = messages.findIndex(m => m.id === this.tempMsgId);
-      if (idx !== -1) {
-        messages.splice(idx, 1);
-      }
-      this.tempMsgId = null;
-    }
-  },
-
-  // 啟動新的計時器
-  startTimers: function(updateCallback) {
-    this.clearTimers(); // 啟動前先砍掉所有舊的，確保絕對乾淨
-    this.tempMsgId = uid();
-
-    this.timer4s = setTimeout(() => {
-      updateCallback("正在深度查詢資料中...");
-    }, 4000);
-
-    this.timer8s = setTimeout(() => {
-      updateCallback("資訊已查詢清楚，正在回傳中...");
-    }, 8000);
-  }
-};
 /* =========================
-   Call backend logic (independent error counters)
+   Call backend logic
 ========================= */
-
 async function sendText(text, retryCounts = {}) {
   const content = (text ?? elInput?.value ?? "").trim();
   if (!content) return;
 
   const contentToSend = processQuestionMarks(content);
 
-  // Initialize retry counters
+  // 初始化重試計數器
   if (!retryCounts.emptyResponse) retryCounts.emptyResponse = 0;
   if (!retryCounts.incompleteMarkers) retryCounts.incompleteMarkers = 0;
   if (!retryCounts.httpErrors) retryCounts.httpErrors = 0;
 
-  // Check if this is the first request
   const isFirstRequest =
     retryCounts.emptyResponse === 0 &&
     retryCounts.incompleteMarkers === 0 &&
     retryCounts.httpErrors === 0;
 
-  // Only show user message and clear input on first call
   if (isFirstRequest) {
+    // ★ 第一道鎖：如果已經在請求中，直接擋掉所有新的連點
+    if (window.isChatFetching) return;
+    window.isChatFetching = true;
+
     const userMsg = { id: uid(), role: "user", text: content, ts: Date.now() };
     messages.push(userMsg);
     if (elInput) elInput.value = "";
@@ -263,25 +229,46 @@ async function sendText(text, retryCounts = {}) {
   }
 
   setThinking(true);
+
   // ==========================================
-  // 定義過渡訊息的更新邏輯
+  // 核彈級防護：獨立請求 ID 與全域清掃機制
   // ==========================================
+  window.globalReqId++;
+  const currentReqId = window.globalReqId; // 發給這個請求專屬的號碼牌
+
+  // ★ 武器 1：地毯式清掃所有「暫時訊息」
+  const clearAllTempMessages = () => {
+    let hasTemp = false;
+    // 倒序迴圈，將陣列中所有帶有 isTemp 的訊息直接刪除
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].isTemp) {
+        messages.splice(i, 1);
+        hasTemp = true;
+      }
+    }
+    if (hasTemp) render();
+  };
+
   const updateTempMsg = (msgText) => {
-    // ★ 終極防護：如果計時器 ID 已經被清空，代表 API 已結束，絕對不允許更新畫面！
-    if (!ChatState.tempMsgId) return; 
-    
-    const existingIdx = messages.findIndex(m => m.id === ChatState.tempMsgId);
+    // ★ 武器 2：雙重身分證核對
+    // 如果這個計時器是前一次舊請求遺留下來的，或者請求已經結束，立刻作廢！
+    if (currentReqId !== window.globalReqId) return;
+    if (!window.isChatFetching) return;
+
+    // 找尋是否有 isTemp 標記的訊息，沒有就新增，有就更新文字
+    const existingIdx = messages.findIndex(m => m.isTemp === true);
     if (existingIdx === -1) {
-      messages.push({ id: ChatState.tempMsgId, role: "assistant", text: msgText, ts: Date.now() });
+      messages.push({ id: uid(), role: "assistant", text: msgText, ts: Date.now(), isTemp: true }); // ★ 貼上 isTemp 標籤
     } else {
       messages[existingIdx].text = msgText;
     }
     render();
   };
 
-  // 啟動全域計時器
-  ChatState.startTimers(updateTempMsg);
-  // ========================================== 
+  // 放養計時器：就算它們活著，時間到也會被上面的 `updateTempMsg` 擋下來
+  setTimeout(() => updateTempMsg("正在深度查詢資料中..."), 4000);
+  setTimeout(() => updateTempMsg("資訊已查詢清楚，正在回傳中..."), 8000);
+  // ==========================================
   try {
     const res = await fetch(api("/api/chat"), {
       method: "POST",
