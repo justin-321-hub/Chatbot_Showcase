@@ -192,7 +192,47 @@ function render() {
 
   scrollToBottom();
 }
+/* =========================
+   全域狀態管理器 (Global State)
+========================= */
+// ★ 將所有請求鎖、計時器、暫時訊息 ID 統一集中管理，杜絕幽靈計時器
+const ChatState = {
+  isRequestInProgress: false,
+  timer4s: null,
+  timer8s: null,
+  tempMsgId: null,
 
+  // 強制清除所有計時器與過渡訊息
+  clearTimers: function() {
+    if (this.timer4s) clearTimeout(this.timer4s);
+    if (this.timer8s) clearTimeout(this.timer8s);
+    this.timer4s = null;
+    this.timer8s = null;
+
+    // 將「正在查詢...」的暫時訊息從陣列中徹底移除
+    if (this.tempMsgId) {
+      const idx = messages.findIndex(m => m.id === this.tempMsgId);
+      if (idx !== -1) {
+        messages.splice(idx, 1);
+      }
+      this.tempMsgId = null;
+    }
+  },
+
+  // 啟動新的計時器
+  startTimers: function(updateCallback) {
+    this.clearTimers(); // 啟動前先砍掉所有舊的，確保絕對乾淨
+    this.tempMsgId = uid();
+
+    this.timer4s = setTimeout(() => {
+      updateCallback("正在深度查詢資料中...");
+    }, 4000);
+
+    this.timer8s = setTimeout(() => {
+      updateCallback("資訊已查詢清楚，正在回傳中...");
+    }, 8000);
+  }
+};
 /* =========================
    Call backend logic (independent error counters)
 ========================= */
@@ -223,45 +263,25 @@ async function sendText(text, retryCounts = {}) {
   }
 
   setThinking(true);
-   // ==========================================
-  // ★ 新增：等待時間提示（4秒與8秒）
   // ==========================================
-  const tempMsgId = uid();
-  let timersCleared = false;
-
-  // 更新或新增暫時訊息
+  // 定義過渡訊息的更新邏輯
+  // ==========================================
   const updateTempMsg = (msgText) => {
-    const existingIdx = messages.findIndex(m => m.id === tempMsgId);
+    // ★ 終極防護：如果計時器 ID 已經被清空，代表 API 已結束，絕對不允許更新畫面！
+    if (!ChatState.tempMsgId) return; 
+    
+    const existingIdx = messages.findIndex(m => m.id === ChatState.tempMsgId);
     if (existingIdx === -1) {
-      messages.push({ id: tempMsgId, role: "assistant", text: msgText, ts: Date.now() });
+      messages.push({ id: ChatState.tempMsgId, role: "assistant", text: msgText, ts: Date.now() });
     } else {
       messages[existingIdx].text = msgText;
     }
     render();
   };
 
-  const timer4s = setTimeout(() => {
-    updateTempMsg("正在深度查詢資料中...");
-  }, 4000);
-
-  const timer8s = setTimeout(() => {
-    updateTempMsg("資訊已查詢清楚，正在回傳中...");
-  }, 8000);
-
-  // 清理計時器與暫時訊息的函式
-  const cleanupTimers = () => {
-    if (timersCleared) return;
-    timersCleared = true;
-    clearTimeout(timer4s);
-    clearTimeout(timer8s);
-    // 將暫時訊息從陣列中移除
-    const idx = messages.findIndex(m => m.id === tempMsgId);
-    if (idx !== -1) {
-      messages.splice(idx, 1);
-    }
-  };
-  // ==========================================
-
+  // 啟動全域計時器
+  ChatState.startTimers(updateTempMsg);
+  // ========================================== 
   try {
     const res = await fetch(api("/api/chat"), {
       method: "POST",
