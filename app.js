@@ -169,8 +169,8 @@ function render() {
     const avatar = document.createElement("img");
     avatar.className = "avatar";
     avatar.src = isUser
-      ? 'https://raw.githubusercontent.com/justin-321-hub/taipei_marathon/refs/heads/main/assets/user-avatar.png'
-      : 'https://raw.githubusercontent.com/justin-321-hub/taipei_marathon/refs/heads/main/assets/logo.png';
+      ? 'https://raw.githubusercontent.com/justin-321-hub/2026_TAIPEI_101_RUN_UP/refs/heads/main/assets/user-avatar.png'
+      : 'https://raw.githubusercontent.com/justin-321-hub/2026_TAIPEI_101_RUN_UP/refs/heads/main/assets/logo.png';
     avatar.alt = isUser ? "you" : "bot";
 
     // Message bubble
