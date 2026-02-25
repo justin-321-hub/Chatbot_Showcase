@@ -223,6 +223,44 @@ async function sendText(text, retryCounts = {}) {
   }
 
   setThinking(true);
+   // ==========================================
+  // ★ 新增：等待時間提示（4秒與8秒）
+  // ==========================================
+  const tempMsgId = uid();
+  let timersCleared = false;
+
+  // 更新或新增暫時訊息
+  const updateTempMsg = (msgText) => {
+    const existingIdx = messages.findIndex(m => m.id === tempMsgId);
+    if (existingIdx === -1) {
+      messages.push({ id: tempMsgId, role: "assistant", text: msgText, ts: Date.now() });
+    } else {
+      messages[existingIdx].text = msgText;
+    }
+    render();
+  };
+
+  const timer4s = setTimeout(() => {
+    updateTempMsg("正在深度查詢資料中...");
+  }, 4000);
+
+  const timer8s = setTimeout(() => {
+    updateTempMsg("資訊已查詢清楚，正在回傳中...");
+  }, 8000);
+
+  // 清理計時器與暫時訊息的函式
+  const cleanupTimers = () => {
+    if (timersCleared) return;
+    timersCleared = true;
+    clearTimeout(timer4s);
+    clearTimeout(timer8s);
+    // 將暫時訊息從陣列中移除
+    const idx = messages.findIndex(m => m.id === tempMsgId);
+    if (idx !== -1) {
+      messages.splice(idx, 1);
+    }
+  };
+  // ==========================================
 
   try {
     const res = await fetch(api("/api/chat"), {
