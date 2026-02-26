@@ -410,7 +410,7 @@ window.addEventListener("load", () => elInput?.focus());
 messages.push({
   id: uid(),
   role: "assistant",
-  text: "歡迎參加 2026 101公益垂直馬拉松！有甚麼賽事相關的問題歡迎問我!",
+  text: "歡迎參加 2026中國信託·台北101公益垂直馬拉松！有甚麼賽事相關的問題歡迎問我!",
   ts: Date.now(),
 });
 
