@@ -163,8 +163,8 @@ function render() {
     const avatar = document.createElement("img");
     avatar.className = "avatar";
     avatar.src = isUser
-      ? 'https://raw.githubusercontent.com/justin-321-hub/2026_TAIPEI_101_RUN_UP/refs/heads/main/assets/user-avatar.jpg'
-      : 'https://raw.githubusercontent.com/justin-321-hub/2026_TAIPEI_101_RUN_UP/refs/heads/main/assets/bot.jpg';
+      ? 'https://raw.githubusercontent.com/justin-321-hub/2026_TAIPEI_101_RUN_UP/refs/heads/main/assets/user-avatar.png'
+      : 'https://raw.githubusercontent.com/justin-321-hub/2026_TAIPEI_101_RUN_UP/refs/heads/main/assets/bot.png';
     avatar.alt = isUser ? "you" : "bot";
 
     const bubble = document.createElement("div");
