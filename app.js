@@ -248,7 +248,7 @@ async function sendText(text, retryCounts = {}) {
     render();
   };
 
-  setTimeout(() => updateTempMsg("正在深度查詢資料中..."), 4000);
+  setTimeout(() => updateTempMsg("正在為你加速查詢中..."), 4000);
   setTimeout(() => updateTempMsg("資訊已查詢清楚，正在回傳中..."), 8000);
   // ==========================================
 
